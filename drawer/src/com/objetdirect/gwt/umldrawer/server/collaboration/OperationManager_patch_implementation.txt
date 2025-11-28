@@ -1,0 +1,117 @@
+// OperationManager.java のrecomputePatchメソッドの完全実装
+// TODOマーカーを置き換えてください
+
+import org.bitbucket.cowwoc.diff_match_patch.DiffMatchPatch;
+import org.bitbucket.cowwoc.diff_match_patch.Diff;
+import org.bitbucket.cowwoc.diff_match_patch.Patch;
+import java.util.LinkedList;
+
+/**
+ * 並行操作を考慮してパッチを再計算
+ * 
+ * @param originalPatch 元のパッチテキスト
+ * @param concurrentOp 並行して実行された操作のパッチ
+ * @return トランスフォームされたパッチ
+ */
+private String recomputePatch(String originalPatch, String concurrentOp) {
+    if (originalPatch == null || originalPatch.isEmpty()) {
+        return originalPatch;
+    }
+    
+    if (concurrentOp == null || concurrentOp.isEmpty()) {
+        return originalPatch;
+    }
+    
+    try {
+        DiffMatchPatch dmp = new DiffMatchPatch();
+        
+        // パッチ文字列をPatchオブジェクトに変換
+        LinkedList<Patch> originalPatches = (LinkedList<Patch>) dmp.patch_fromText(originalPatch);
+        LinkedList<Patch> concurrentPatches = (LinkedList<Patch>) dmp.patch_fromText(concurrentOp);
+        
+        if (originalPatches.isEmpty()) {
+            return originalPatch;
+        }
+        
+        // 簡易的なOTアルゴリズム: 位置オフセットの調整
+        for (Patch originalPatch : originalPatches) {
+            int offset = 0;
+            
+            // 並行パッチの影響を計算
+            for (Patch concurrentPatch : concurrentPatches) {
+                if (concurrentPatch.start1 < originalPatch.start1) {
+                    // 前方で挿入/削除が発生している場合、位置を調整
+                    offset += (concurrentPatch.length2 - concurrentPatch.length1);
+                }
+            }
+            
+            // オフセットを適用
+            if (offset != 0) {
+                originalPatch.start1 += offset;
+                originalPatch.start2 += offset;
+            }
+        }
+        
+        // パッチをテキストに戻す
+        return dmp.patch_toText(originalPatches);
+        
+    } catch (Exception e) {
+        logger.severe("パッチのトランスフォームエラー: " + e.getMessage());
+        e.printStackTrace();
+        // エラー時は元のパッチをそのまま返す
+        return originalPatch;
+    }
+}
+
+/**
+ * より高度なOTアルゴリズム（代替実装）
+ * Jupiter OT方式に基づく
+ */
+private String recomputePatchAdvanced(String originalPatch, String concurrentOp, 
+                                      String baseText) {
+    try {
+        DiffMatchPatch dmp = new DiffMatchPatch();
+        
+        // 1. 元のパッチを適用した結果を取得
+        LinkedList<Patch> patches = (LinkedList<Patch>) dmp.patch_fromText(originalPatch);
+        Object[] patchResult = dmp.patch_apply(patches, baseText);
+        String afterOriginal = (String) patchResult[0];
+        
+        // 2. 並行パッチを適用した結果を取得
+        LinkedList<Patch> concurrentPatches = (LinkedList<Patch>) dmp.patch_fromText(concurrentOp);
+        Object[] concurrentResult = dmp.patch_apply(concurrentPatches, baseText);
+        String afterConcurrent = (String) concurrentResult[0];
+        
+        // 3. 両方の変更を反映した新しいdiffを生成
+        LinkedList<Diff> diffs = dmp.diff_main(afterConcurrent, afterOriginal);
+        dmp.diff_cleanupSemantic(diffs);
+        
+        // 4. 新しいパッチを生成
+        LinkedList<Patch> transformedPatches = dmp.patch_make(afterConcurrent, diffs);
+        
+        return dmp.patch_toText(transformedPatches);
+        
+    } catch (Exception e) {
+        logger.severe("高度なパッチトランスフォームエラー: " + e.getMessage());
+        e.printStackTrace();
+        return originalPatch;
+    }
+}
+
+/**
+ * 使用方法:
+ * 
+ * OperationManager.javaの該当箇所を以下のように置き換え:
+ * 
+ * // 簡易版（高速だが精度は低い）
+ * String transformedPatch = recomputePatch(newOp.getPatchText(), lastOp.getPatchText());
+ * 
+ * // 高度版（より正確だが計算コストが高い）
+ * String transformedPatch = recomputePatchAdvanced(
+ *     newOp.getPatchText(), 
+ *     lastOp.getPatchText(),
+ *     newOp.getBeforeText()
+ * );
+ * 
+ * newOp.setPatchText(transformedPatch);
+ */

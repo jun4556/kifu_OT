@@ -1,0 +1,20 @@
+// WebSocketClient.javaのonMessageメソッドに追加するコード
+// 既存のelse if文の後に追加してください
+
+                else if ("editOperationResponse".equals(action)) {
+                    // OT方式の編集操作レスポンス
+                    int serverSequence = (int) jsonObject.get("serverSequence").isNumber().doubleValue();
+                    String elementId = jsonObject.get("elementId").isString().stringValue();
+                    String partId = jsonObject.get("partId").isString().stringValue();
+                    String afterText = jsonObject.get("afterText").isString().stringValue();
+                    String userId = jsonObject.get("userId").isString().stringValue();
+                    
+                    // 自分の操作かどうかを判定
+                    boolean isOwnOperation = jsonObject.containsKey("isOwnOperation") && 
+                                            jsonObject.get("isOwnOperation").isBoolean().booleanValue();
+                    
+                    if (drawerPanel != null) {
+                        // DrawerPanelのOTヘルパーを使用して操作を適用
+                        drawerPanel.applyOTOperation(serverSequence, elementId, partId, afterText, userId, isOwnOperation);
+                    }
+                }

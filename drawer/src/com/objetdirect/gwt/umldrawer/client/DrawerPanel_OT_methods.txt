@@ -1,0 +1,55 @@
+// DrawerPanel.javaに追加するフィールドとメソッド
+
+// ==================== フィールド ====================
+// クラスの先頭に追加
+private OperationTransformHelper otHelper;
+
+// ==================== メソッド ====================
+// クラス内の適切な場所に追加
+
+/**
+ * OperationTransformHelperを初期化
+ * WebSocket接続確立後に呼び出す
+ */
+public void initializeOTHelper(String userId, int exerciseId) {
+    if (webSocketClient != null) {
+        this.otHelper = new OperationTransformHelper(webSocketClient, userId, exerciseId);
+    }
+}
+
+/**
+ * テキスト変更をOT方式で送信
+ * 既存のsendTextUpdateメソッドの代わりに使用
+ */
+public void sendTextChangeWithOT(String elementId, String partId, String beforeText, String afterText) {
+    if (otHelper != null) {
+        otHelper.sendTextChangeWithOT(elementId, partId, beforeText, afterText);
+    }
+}
+
+/**
+ * サーバーからのOT操作を適用
+ * WebSocketClientから呼び出される
+ */
+public void applyOTOperation(int serverSequence, String elementId, String partId, 
+                             String afterText, String userId, boolean isOwnOperation) {
+    if (otHelper != null) {
+        // サーバーシーケンスを更新
+        otHelper.setLastServerSequence(serverSequence);
+    }
+    
+    // 自分の操作の場合は既に適用済みなので何もしない
+    if (isOwnOperation) {
+        return;
+    }
+    
+    // 他ユーザーの操作の場合は、テキストを更新
+    updateArtifactText(elementId, partId, afterText);
+}
+
+/**
+ * OTヘルパーを取得（テスト用）
+ */
+public OperationTransformHelper getOTHelper() {
+    return otHelper;
+}

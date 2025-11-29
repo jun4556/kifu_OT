@@ -61,6 +61,15 @@ public class EditOperation implements Serializable {
     /** 移動操作用: Y方向移動量 */
     private int deltaY;
     
+    /** 移動操作用: 移動後X座標（絶対座標） */
+    private int newX;
+    
+    /** 移動操作用: 移動後Y座標（絶対座標） */
+    private int newY;
+    
+    /** 操作を実行したクライアントの一意識別子 */
+    private String clientId;
+    
     public EditOperation() {
         this.timestamp = System.currentTimeMillis();
     }
@@ -201,6 +210,30 @@ public class EditOperation implements Serializable {
     
     public void setDeltaY(int deltaY) {
         this.deltaY = deltaY;
+    }
+    
+    public int getNewX() {
+        return newX;
+    }
+    
+    public void setNewX(int newX) {
+        this.newX = newX;
+    }
+    
+    public int getNewY() {
+        return newY;
+    }
+    
+    public void setNewY(int newY) {
+        this.newY = newY;
+    }
+    
+    public String getClientId() {
+        return clientId;
+    }
+    
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
     
     @Override

@@ -97,6 +97,33 @@ public class OperationTransformHelper {
     }
     
     /**
+     * 絶対座標方式で移動操作を送信（タイムスタンプベースのLWW）
+     */
+    public void sendMoveOperationAbsolute(String elementId, int oldX, int oldY, int newX, int newY) {
+        clientSequence++;
+        
+        // JSONメッセージを構築
+        JSONObject message = new JSONObject();
+        message.put("action", new JSONString("moveOperation"));
+        message.put("clientSequence", new JSONNumber(clientSequence));
+        message.put("userId", new JSONString(userId));
+        message.put("clientId", new JSONString(userId + "_" + System.currentTimeMillis()));
+        message.put("elementId", new JSONString(elementId));
+        message.put("operationType", new JSONString("move_absolute"));
+        message.put("oldX", new JSONNumber(oldX));
+        message.put("oldY", new JSONNumber(oldY));
+        message.put("newX", new JSONNumber(newX));
+        message.put("newY", new JSONNumber(newY));
+        message.put("exerciseId", new JSONNumber(exerciseId));
+        message.put("timestamp", new JSONNumber(System.currentTimeMillis()));
+        
+        // WebSocket経由で送信
+        if (webSocketClient != null && webSocketClient.isOpen()) {
+            webSocketClient.send(message.toString());
+        }
+    }
+    
+    /**
      * サーバーから受信した操作を適用
      * * @param operation サーバーから受信した操作
      * @return 適用後のテキスト

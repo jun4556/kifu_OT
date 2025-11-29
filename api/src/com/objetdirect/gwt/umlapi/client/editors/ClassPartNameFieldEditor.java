@@ -76,17 +76,15 @@ public class ClassPartNameFieldEditor extends FieldEditor {
 			((ClassPartNameArtifact) this.artifact).setClassName(newName);
 			((ClassPartNameArtifact) this.artifact).getNodeArtifact().rebuildGfxObject();
 			
-		// OT方式でテキスト変更を送信
-		if (UMLCanvas.webSocketSender != null && !oldContent.equals(newName)) {
-		    String elementId = "element-" + classId;
-		    String partId = "ClassPartNameArtifact";
-		    UMLCanvas.webSocketSender.sendTextChangeWithOT(elementId, partId, oldContent, newName);
-		    // OT送信した場合はedit_eventへの記録をスキップして終了
-		    return true;
-		}
+			// OT方式でテキスト変更を送信
+			if (UMLCanvas.webSocketSender != null && !oldContent.equals(newName)) {
+			    String elementId = "element-" + classId;
+			    String partId = "ClassPartNameArtifact";
+			    UMLCanvas.webSocketSender.sendTextChangeWithOT(elementId, partId, oldContent, newName);
+			}
 
-		if (newName.equals("")) {
-			((ClassPartNameArtifact) this.artifact).setClassName("Class");
+			if (newName.equals("")) {
+				((ClassPartNameArtifact) this.artifact).setClassName("Class");
 				MyLoggerExecute.registEditEvent(-1, "ClassName", "Remove",
 						classArtifact.getClass().getName(), classId, null, -1, -1,
 						null, oldContent, newContent, null, UMLArtifact.getIdCount());

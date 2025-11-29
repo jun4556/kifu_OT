@@ -47,7 +47,6 @@
 	<classpathentry kind="lib" path="C:/pleiades/2025-03/workspace/kifu/drawer/war/WEB-INF/lib/commons-compress-1.19.jar"/>
 	<classpathentry kind="lib" path="C:/pleiades/2025-03/workspace/kifu/drawer/war/WEB-INF/lib/curvesapi-1.06.jar"/>
 	<classpathentry kind="lib" path="C:/pleiades/2025-03/workspace/kifu/drawer/war/WEB-INF/lib/commons-collections4-4.5.0-M2.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/diff-match-patch-1.2.jar"/>
 	<classpathentry kind="con" path="com.gwtplugins.gwt.eclipse.core.GWT_CONTAINER"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>

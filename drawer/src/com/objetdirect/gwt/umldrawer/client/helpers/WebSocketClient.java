@@ -116,22 +116,19 @@ public class WebSocketClient implements WebSocketSender {
                     }
                 }
                 else if ("moveOperationResponse".equals(action)) {
-                    // OT方式の移動操作レスポンス
-                    int serverSequence = (int) jsonObject.get("serverSequence").isNumber().doubleValue();
+                    // 絶対座標方式の移動操作レスポンス（タイムスタンプベースのLWW）
                     String elementId = jsonObject.get("elementId").isString().stringValue();
                     int oldX = (int) jsonObject.get("oldX").isNumber().doubleValue();
                     int oldY = (int) jsonObject.get("oldY").isNumber().doubleValue();
-                    int deltaX = (int) jsonObject.get("deltaX").isNumber().doubleValue();
-                    int deltaY = (int) jsonObject.get("deltaY").isNumber().doubleValue();
+                    int newX = (int) jsonObject.get("newX").isNumber().doubleValue();
+                    int newY = (int) jsonObject.get("newY").isNumber().doubleValue();
+                    long timestamp = (long) jsonObject.get("timestamp").isNumber().doubleValue();
                     String userId = jsonObject.get("userId").isString().stringValue();
-                    
-                    // 自分の操作かどうかを判定
-                    boolean isOwnOperation = jsonObject.containsKey("isOwnOperation") && 
-                                            jsonObject.get("isOwnOperation").isBoolean().booleanValue();
+                    String clientId = jsonObject.get("clientId").isString().stringValue();
                     
                     if (drawerPanel != null) {
-                        // DrawerPanelのOTヘルパーを使用して移動を適用
-                        drawerPanel.applyMoveOTOperation(serverSequence, elementId, oldX, oldY, deltaX, deltaY, userId, isOwnOperation);
+                        // DrawerPanelを通じて絶対座標で移動を適用
+                        drawerPanel.applyMoveOperationAbsolute(elementId, newX, newY, timestamp, clientId);
                     }
                 }
             }
@@ -159,6 +156,17 @@ public class WebSocketClient implements WebSocketSender {
     public void sendMoveWithOT(String elementId, int oldX, int oldY, int deltaX, int deltaY) {
         if (drawerPanel != null && drawerPanel.getOTHelper() != null) {
             drawerPanel.sendMoveWithOT(elementId, oldX, oldY, deltaX, deltaY);
+        }
+    }
+    
+    /**
+     * 絶対座標方式で移動を送信
+     * タイムスタンプベースのLWW (Last-Write-Wins) 競合解決
+     */
+    @Override
+    public void sendMoveWithAbsolutePosition(String elementId, int oldX, int oldY, int newX, int newY) {
+        if (drawerPanel != null && drawerPanel.getOTHelper() != null) {
+            drawerPanel.sendMoveWithAbsolutePosition(elementId, oldX, oldY, newX, newY);
         }
     }
 }

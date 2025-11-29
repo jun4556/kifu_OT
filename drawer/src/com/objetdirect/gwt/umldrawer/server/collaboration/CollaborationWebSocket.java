@@ -1,6 +1,9 @@
 package com.objetdirect.gwt.umldrawer.server.collaboration;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -18,6 +21,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.objetdirect.gwt.umldrawer.client.beans.EditOperation;
 import com.objetdirect.gwt.umldrawer.server.dao.Dao;
+import com.objetdirect.gwt.umldrawer.server.yamazaki.dao.DatabaseAccessorUMLDS;
 
 /**
  * WebSocketエンドポイント
@@ -59,6 +63,10 @@ public class CollaborationWebSocket {
             
             if ("editOperation".equals(action)) {
                 handleEditOperation(json, session);
+            }
+            else if ("moveOperation".equals(action)) {
+                // 絶対座標方式の移動操作（タイムスタンプベースのLWW）
+                handleMoveOperationAbsolute(json, session);
             }
             else if ("sync".equals(action)) {
                 // キャンバス全体の同期: 他のクライアントにブロードキャスト
@@ -421,6 +429,98 @@ public class CollaborationWebSocket {
             }
         }
         
+        
         logger.info("操作を全クライアントに配信しました。ServerSeq: " + operation.getServerSequence());
     }
+    
+    /**
+     * 絶対座標方式の移動操作を処理（タイムスタンプベースのLWW）
+     */
+    private void handleMoveOperationAbsolute(JsonObject json, Session senderSession) {
+        try {
+            String elementId = json.get("elementId").getAsString();
+            int oldX = json.get("oldX").getAsInt();
+            int oldY = json.get("oldY").getAsInt();
+            int newX = json.get("newX").getAsInt();
+            int newY = json.get("newY").getAsInt();
+            long timestamp = json.get("timestamp").getAsLong();
+            String userId = json.get("userId").getAsString();
+            String clientId = json.get("clientId").getAsString();
+            int exerciseId = json.get("exerciseId").getAsInt();
+            
+            // データベースに保存（タイムスタンプも記録）
+            saveMoveOperationToDatabase(elementId, oldX, oldY, newX, newY, timestamp, userId, exerciseId);
+            
+            // 全クライアントにブロードキャスト（LWW方式でクライアント側が適用判断）
+            JsonObject response = new JsonObject();
+            response.addProperty("action", "moveOperationResponse");
+            response.addProperty("elementId", elementId);
+            response.addProperty("oldX", oldX);
+            response.addProperty("oldY", oldY);
+            response.addProperty("newX", newX);
+            response.addProperty("newY", newY);
+            response.addProperty("timestamp", timestamp);
+            response.addProperty("userId", userId);
+            response.addProperty("clientId", clientId);
+            
+            String jsonString = gson.toJson(response);
+            
+            synchronized (sessions) {
+                for (Session session : sessions) {
+                    try {
+                        session.getBasicRemote().sendText(jsonString);
+                    } catch (IOException e) {
+                        logger.warning("移動操作ブロードキャスト失敗: " + e.getMessage());
+                    }
+                }
+            }
+            
+            logger.info("移動操作をブロードキャストしました。Element: " + elementId + ", Timestamp: " + timestamp);
+            
+        } catch (Exception e) {
+            logger.severe("移動操作処理エラー: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 移動操作をデータベースに保存
+     */
+    private void saveMoveOperationToDatabase(String elementId, int oldX, int oldY, int newX, int newY, 
+                                            long timestamp, String userId, int exerciseId) {
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        
+        try {
+            DatabaseAccessorUMLDS dbAccessor = DatabaseAccessorUMLDS.getInstance();
+            conn = dbAccessor.createHikariConnection();
+            String sql = "INSERT INTO operation_log (element_id, operation_type, old_x, old_y, new_x, new_y, " +
+                        "timestamp, user_id, exercise_id) VALUES (?, 'move_absolute', ?, ?, ?, ?, ?, ?, ?)";
+            
+            stmt = conn.prepareStatement(sql);
+            stmt.setString(1, elementId);
+            stmt.setInt(2, oldX);
+            stmt.setInt(3, oldY);
+            stmt.setInt(4, newX);
+            stmt.setInt(5, newY);
+            stmt.setLong(6, timestamp);
+            stmt.setString(7, userId);
+            stmt.setInt(8, exerciseId);
+            
+            int rows = stmt.executeUpdate();
+            logger.info("移動操作をDBに保存しました。Element: " + elementId + ", rows: " + rows);
+            
+        } catch (SQLException e) {
+            logger.severe("DB保存エラー: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            try {
+                if (stmt != null) stmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                logger.warning("DB接続クローズ失敗: " + e.getMessage());
+            }
+        }
+    }
 }
+

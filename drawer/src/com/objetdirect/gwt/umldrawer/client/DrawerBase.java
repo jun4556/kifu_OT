@@ -888,17 +888,22 @@ public class DrawerBase extends DockPanel implements IDrawerBaseConectThread{
 		        }
 		    }
 		    
-		    public void sendMoveWithOT(String elementId, int oldX, int oldY, int deltaX, int deltaY) {
-		        // OT方式で移動を送信
-		        if (drawerPanel != null) {
-		            drawerPanel.sendMoveWithOT(elementId, oldX, oldY, deltaX, deltaY);
-		        }
-		    }
-		};
+    public void sendMoveWithOT(String elementId, int oldX, int oldY, int deltaX, int deltaY) {
+        // OT方式で移動を送信
+        if (drawerPanel != null) {
+            drawerPanel.sendMoveWithOT(elementId, oldX, oldY, deltaX, deltaY);
+        }
+    }
+    
+    public void sendMoveWithAbsolutePosition(String elementId, int oldX, int oldY, int newX, int newY) {
+        // 絶対座標方式で移動を送信
+        if (drawerPanel != null) {
+            drawerPanel.sendMoveWithAbsolutePosition(elementId, oldX, oldY, newX, newY);
+        }
+    }
+};
 
-		mainPanel.showWidget(0);
-
-		this.add(mainPanel, DockPanel.CENTER);
+mainPanel.showWidget(0);		this.add(mainPanel, DockPanel.CENTER);
 		this.add(leftSideBar, DockPanel.WEST);
 		//this.add(rightSideBar, DockPanel.EAST);
 		this.add(northBar, DockPanel.NORTH);

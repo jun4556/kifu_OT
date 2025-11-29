@@ -80,7 +80,7 @@ public class DatabaseAccessorUMLDS {
 //		config.setPassword(PASSWORD);
 //	}
 
-	protected Connection createHikariConnection()
+	public Connection createHikariConnection()
 	{
 
 

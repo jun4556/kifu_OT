@@ -25,4 +25,14 @@ public interface WebSocketSender {
      * @param deltaY Y方向移動量
      */
     void sendMoveWithOT(String elementId, int oldX, int oldY, int deltaX, int deltaY);
+    
+    /**
+     * 絶対座標方式で移動を送信（タイムスタンプベースのLWW）
+     * @param elementId 要素ID
+     * @param oldX 移動前X座標
+     * @param oldY 移動前Y座標
+     * @param newX 移動後X座標
+     * @param newY 移動後Y座標
+     */
+    void sendMoveWithAbsolutePosition(String elementId, int oldX, int oldY, int newX, int newY);
 }

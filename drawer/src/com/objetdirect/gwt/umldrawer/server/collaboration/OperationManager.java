@@ -4,10 +4,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch;
-import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch.Diff;
-import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch.Patch;
-
 import com.objetdirect.gwt.umldrawer.client.beans.EditOperation;
 
 /**
@@ -46,7 +42,6 @@ public class OperationManager {
     
     /**
      * 移動操作を処理
-     * OTアルゴリズムにより、同時移動操作の競合を解決
      * 
      * @param operation クライアントから送信された移動操作
      * @return サーバーで処理された操作（他のクライアントに配信すべきもの）
@@ -64,28 +59,9 @@ public class OperationManager {
         // 操作履歴を取得
         List<EditOperation> history = operationHistory.get(exerciseId);
         
-        // 同じ要素に対する同時移動操作を取得
-        List<EditOperation> concurrentOps = getConcurrentMoveOperations(
-            history, 
-            operation.getElementId(), 
-            operation.getBasedOnServerSequence()
-        );
-        
-        // OT変換: 同時移動操作がある場合、oldX/oldYを調整
-        if (!concurrentOps.isEmpty()) {
-            // 最新の移動操作の最終座標を新しい基準座標とする
-            EditOperation lastOp = concurrentOps.get(concurrentOps.size() - 1);
-            int adjustedOldX = lastOp.getOldX() + lastOp.getDeltaX();
-            int adjustedOldY = lastOp.getOldY() + lastOp.getDeltaY();
-            
-            // 基準座標を更新（deltaはそのまま）
-            operation.setOldX(adjustedOldX);
-            operation.setOldY(adjustedOldY);
-            
-            System.out.println("OT変換適用: " + operation.getElementId() + 
-                             " 元基準(" + lastOp.getOldX() + "," + lastOp.getOldY() + 
-                             ") → 新基準(" + adjustedOldX + "," + adjustedOldY + ")");
-        }
+        // OT方式: deltaは合成しない
+        // 各操作のdeltaをそのまま保持し、クライアント側で順次適用する
+        // これにより、すべてのユーザーの移動が正しく反映される
         
         // 操作履歴に追加
         history.add(operation);
@@ -195,23 +171,13 @@ public class OperationManager {
         
         EditOperation transformed = cloneOperation(newOp);
         
-        // 中間状態を累積管理: 各先行操作を順次適用
-        // 最初はnewOpの基準テキストから開始
-        String accumulatedBaseText = newOp.getBeforeText();
-        
         // 同じ要素・同じ部分に対する操作のみをトランスフォーム対象とする
         for (EditOperation concurrentOp : concurrentOps) {
             if (isSameTarget(newOp, concurrentOp)) {
                 // パッチをトランスフォーム
-                // recomputePatch()は先行操作の結果に新操作のパッチを適用
+                // 注: 本格的なOTでは、操作の種類に応じて複雑なトランスフォームが必要
+                // ここでは簡易版として、パッチを再計算する
                 transformed = recomputePatch(transformed, concurrentOp);
-                
-                // 次のループのために累積的な基準テキストを更新
-                // transformedのafterTextは、priorOpの結果にtransformedのパッチを適用した結果
-                if (transformed.getAfterText() != null) {
-                    accumulatedBaseText = transformed.getAfterText();
-                    transformed.setBeforeText(accumulatedBaseText);
-                }
             }
         }
         
@@ -248,82 +214,32 @@ public class OperationManager {
     
     /**
      * 先行する操作を考慮してパッチを再計算
-     * diff-match-patchライブラリを使用したOT実装
      */
     private EditOperation recomputePatch(EditOperation newOp, EditOperation priorOp) {
-        try {
-            DiffMatchPatch dmp = new DiffMatchPatch();
-            
-            // 先行操作適用後の状態を取得
-            String baseText = priorOp.getAfterText();
-            
-            // newOpのパッチをbaseTextに適用してtargetTextを計算
-            // これがOTの基本原理: 先行操作の結果に新操作のパッチを適用
-            String targetText = applyPatch(baseText, newOp.getPatchText());
-            
-            // パッチ適用失敗時のフォールバック
-            if (targetText == null) {
-                System.err.println("recomputePatch: パッチ適用失敗。元の操作を返します。");
-                System.err.println("  priorOp.afterText=" + baseText);
-                System.err.println("  newOp.patchText=" + newOp.getPatchText());
-                return cloneOperation(newOp);
-            }
-            
-            // baseTextからtargetTextへの新しいパッチを生成
-            LinkedList<Diff> diffs = dmp.diffMain(baseText, targetText);
-            dmp.diffCleanupSemantic(diffs);
-            LinkedList<Patch> patches = dmp.patchMake(baseText, diffs);
-            String newPatchText = dmp.patchToText(patches);
-            
-            EditOperation recomputed = cloneOperation(newOp);
-            recomputed.setPatchText(newPatchText);
-            recomputed.setBeforeText(baseText);
-            recomputed.setAfterText(targetText);
-            
-            return recomputed;
-        } catch (Exception e) {
-            // エラー時は元の操作を返す
-            System.err.println("recomputePatch error: " + e.getMessage());
-            return cloneOperation(newOp);
-        }
+        // 先行操作適用後の状態を基準に、新しいパッチを計算
+        String baseText = priorOp.getAfterText();
+        String targetText = newOp.getAfterText();
+        
+        // TODO: diff-match-patchライブラリを使用した実装
+        // 実装例はOperationManager_patch_implementation.txtを参照
+        
+        EditOperation recomputed = cloneOperation(newOp);
+        
+        // 簡易実装: 先行操作の結果を基準テキストとして、
+        // 新しいパッチを再生成する必要がある
+        // 現状は元のパッチをそのまま使用（要改善）
+        
+        return recomputed;
     }
     
     /**
      * パッチを適用してテキストを更新
-     * diff-match-patchライブラリを使用した完全実装
+     * 注: この実装は簡易版。実際にはdiff-match-patchライブラリが必要
      */
     private String applyPatch(String currentText, String patchText) {
-        if (patchText == null || patchText.isEmpty()) {
-            return currentText;
-        }
-        
-        try {
-            DiffMatchPatch dmp = new DiffMatchPatch();
-            LinkedList<Patch> patches = (LinkedList<Patch>) dmp.patchFromText(patchText);
-            
-            Object[] results = dmp.patchApply(patches, currentText);
-            String patchedText = (String) results[0];
-            boolean[] successFlags = (boolean[]) results[1];
-            
-            // すべてのパッチが成功したか確認
-            boolean allSuccess = true;
-            for (boolean success : successFlags) {
-                if (!success) {
-                    allSuccess = false;
-                    break;
-                }
-            }
-            
-            if (allSuccess) {
-                return patchedText;
-            } else {
-                System.err.println("Some patches failed to apply. Using original text.");
-                return currentText;
-            }
-        } catch (Exception e) {
-            System.err.println("applyPatch error: " + e.getMessage());
-            return currentText;
-        }
+        // TODO: サーバー側でdiff-match-patchを使用してパッチを適用
+        // 現状は簡易実装として、パッチテキストをそのまま返す
+        return currentText;
     }
     
     /**

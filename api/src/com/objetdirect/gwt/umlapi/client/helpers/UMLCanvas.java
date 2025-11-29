@@ -114,8 +114,6 @@ public class UMLCanvas extends AbsolutePanel {
 	private static long										lifeLineCount					= 1;
 	private String											copyBuffer 						= "";
 	public static WebSocketSender webSocketSender;
-	/** OT操作中かどうかを示すフラグ（edit_event記録をスキップするために使用） */
-	private boolean isOTOperation = false;
 	private long											noteCount;
 	private LinkKind										activeLinking;
 	private Point											selectBoxStartPoint;
@@ -1995,35 +1993,36 @@ public class UMLCanvas extends AbsolutePanel {
 		for (final UMLArtifact selectedArtifact : UMLCanvas.this.selectedArtifacts.keySet()) {
 			if (selectedArtifact.isDraggable()) {
 				placeFlag=true;
-				Point oldPoint = selectedArtifact.getLocation();
-				selectedArtifact.moveTo(Point.substract(Point.add(selectedArtifact.getLocation(), this.totalDragShift), this.duringDragOffset));
+			Point oldPoint = selectedArtifact.getLocation();
+			selectedArtifact.moveTo(Point.substract(Point.add(selectedArtifact.getLocation(), this.totalDragShift), this.duringDragOffset));
 
-				selectedArtifact.rebuildGfxObject();
-				
-				// OT方式で移動を送信
-				boolean sentViaOT = false;
-				if (UMLCanvas.webSocketSender != null) {
-				    String elementId = "element-" + selectedArtifact.getId();
-				    Point newPoint = selectedArtifact.getLocation();
-				    int deltaX = newPoint.getX() - oldPoint.getX();
-				    int deltaY = newPoint.getY() - oldPoint.getY();
-				    if (deltaX != 0 || deltaY != 0) {
-				        UMLCanvas.webSocketSender.sendMoveWithOT(elementId, oldPoint.getX(), oldPoint.getY(), deltaX, deltaY);
-				        sentViaOT = true;
-				    }
-				}
-
+			selectedArtifact.rebuildGfxObject();
+			
+			// OT方式で移動を送信（絶対座標方式）
+			if (UMLCanvas.webSocketSender != null) {
+			    String elementId = "element-" + selectedArtifact.getId();
+			    Point newPoint = selectedArtifact.getLocation();
+			    int deltaX = newPoint.getX() - oldPoint.getX();
+			    int deltaY = newPoint.getY() - oldPoint.getY();
+			    if (deltaX != 0 || deltaY != 0) {
+			        // 絶対座標 (newX, newY) を送信
+			        UMLCanvas.webSocketSender.sendMoveWithAbsolutePosition(
+			            elementId, 
+			            oldPoint.getX(), 
+			            oldPoint.getY(), 
+			            newPoint.getX(), 
+			            newPoint.getY()
+			        );
+			    }
+			}
 
 				//TODO dropEvent
 				//writeLog(selectedArtifact);
 				//MyLogger.operationLog("DropArtifact"+":"+selectedArtifact.toURL());
 				System.out.println("DropArtifact"+":"+selectedArtifact.toString());
-				// OT経由で送信した場合はedit_eventに記録しない（operation_logに記録されるため）
-				if (!sentViaOT) {
-				    MyLoggerExecute.registEditEvent(-1, selectedArtifact.toString(), "Place",
-						    selectedArtifact.getClass().getName(), selectedArtifact.getId(), null, -1, -1,
-						    null, oldPoint.getX()+","+oldPoint.getY(), selectedArtifact.getLocation().getX()+","+selectedArtifact.getLocation().getY(), null, UMLArtifact.getIdCount());
-				}
+				MyLoggerExecute.registEditEvent(-1, selectedArtifact.toString(), "Place",
+						selectedArtifact.getClass().getName(), selectedArtifact.getId(), null, -1, -1,
+						null, oldPoint.getX()+","+oldPoint.getY(), selectedArtifact.getLocation().getX()+","+selectedArtifact.getLocation().getY(), null, UMLArtifact.getIdCount());
 
 //				int preEventId, String editEvent, String eventType,
 //				String targetType, int targetId, String linkKind, int rightObjectId, int leftObjectId,
@@ -2035,8 +2034,7 @@ public class UMLCanvas extends AbsolutePanel {
 		GfxManager.getPlatform().clearVirtualGroup(this.outlines);
 		GfxManager.getPlatform().clearVirtualGroup(this.movingOutlineDependencies);
 
-		// OT経由の場合はPlaceArtifactsイベントも記録しない
-		if(placeFlag && UMLCanvas.webSocketSender == null){
+		if(placeFlag){
 			MyLoggerExecute.registEditEvent(-1, "PlaceArtifacts", "Place",
 					null, -1, null, -1, -1,
 					null, null, null, this.toUrl(), UMLArtifact.getIdCount());

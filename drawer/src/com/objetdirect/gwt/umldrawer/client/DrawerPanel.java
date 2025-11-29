@@ -36,8 +36,6 @@ import com.objetdirect.gwt.umlapi.client.helpers.Session;
 import com.objetdirect.gwt.umlapi.client.helpers.ThemeManager;
 import com.objetdirect.gwt.umlapi.client.helpers.ThemeManager.Theme;
 import com.objetdirect.gwt.umlapi.client.helpers.UMLCanvas;
-import com.objetdirect.gwt.umlapi.client.umlcomponents.UMLClassAttribute;
-import com.objetdirect.gwt.umlapi.client.umlcomponents.UMLClassMethod;
 import com.objetdirect.gwt.umlapi.client.umlcomponents.UMLDiagram;
 import com.objetdirect.gwt.umlapi.client.umlcomponents.UMLDiagram.Type;
 import com.objetdirect.gwt.umldrawer.client.helpers.DiffMatchPatchGwt;
@@ -312,38 +310,12 @@ public class DrawerPanel extends AbsolutePanel {
 	        int id = Integer.parseInt(elementId.substring("element-".length()));
 	        UMLArtifact artifact = UMLArtifact.getArtifactById(id);
 
-	        if (artifact != null && artifact instanceof ClassArtifact) {
-	            ClassArtifact classArtifact = (ClassArtifact) artifact;
-	            
+	        if (artifact != null) {
 	            // ClassArtifactのクラス名が変更された場合
-	            if (partId.contains("ClassPartNameArtifact")) {
-	                classArtifact.getUMLClass().setName(newText);
+	            if (artifact instanceof ClassArtifact && partId.contains("ClassPartNameArtifact")) {
+	                ((ClassArtifact) artifact).getUMLClass().setName(newText);
 	            }
-	            // 属性が変更された場合
-	            else if (partId.contains("ClassPartAttributesArtifact")) {
-	                int attrIndex = extractIndex(partId);
-	                if (attrIndex >= 0 && attrIndex < classArtifact.getAttributes().size()) {
-	                    UMLClassAttribute attr = classArtifact.getAttributes().get(attrIndex);
-	                    // パースして属性を更新
-	                    UMLClassAttribute newAttr = UMLClassAttribute.parseAttribute(newText);
-	                    attr.setVisibility(newAttr.getVisibility());
-	                    attr.setName(newAttr.getName());
-	                    attr.setType(newAttr.getType());
-	                }
-	            }
-	            // 操作が変更された場合
-	            else if (partId.contains("ClassPartMethodsArtifact")) {
-	                int methodIndex = extractIndex(partId);
-	                if (methodIndex >= 0 && methodIndex < classArtifact.getMethods().size()) {
-	                    UMLClassMethod method = classArtifact.getMethods().get(methodIndex);
-	                    // パースして操作を更新
-	                    UMLClassMethod newMethod = UMLClassMethod.parseMethod(newText);
-	                    method.setVisibility(newMethod.getVisibility());
-	                    method.setName(newMethod.getName());
-	                    method.setReturnType(newMethod.getReturnType());
-	                    method.setParameters(newMethod.getParameters());
-	                }
-	            }
+	            // 他にも属性や操作名など、様々な部分の更新処理をここに追加していくことになる
 
 	            // 変更を画面に反映させるために、図形を再描画する
 	            artifact.rebuildGfxObject();
@@ -351,70 +323,6 @@ public class DrawerPanel extends AbsolutePanel {
 	    } catch (Exception e) {
 	        System.err.println("テキストの更新に失敗: " + e.getMessage());
 	    }
-	}
-	
-	/**
-	 * partIdからインデックスを抽出
-	 * 例: "ClassPartAttributesArtifact-2" -> 2
-	 */
-	private int extractIndex(String partId) {
-	    try {
-	        int dashIndex = partId.lastIndexOf('-');
-	        if (dashIndex >= 0) {
-	            return Integer.parseInt(partId.substring(dashIndex + 1));
-	        }
-	    } catch (NumberFormatException e) {
-	        // インデックスが含まれていない
-	    }
-	    return -1;
-	}
-	
-	/**
-	 * 指定された要素・パートの現在のテキスト内容を取得
-	 * applyOTOperation()での状態同期検証に使用
-	 * 
-	 * @param elementId 要素ID
-	 * @param partId パートID
-	 * @return 現在のテキスト内容、取得失敗時はnull
-	 */
-	private String getCurrentPartContent(String elementId, String partId) {
-	    UMLArtifact artifact = this.canvas.getArtifactById(Integer.parseInt(elementId));
-	    if (artifact == null) {
-	        return null;
-	    }
-	    
-	    // ClassPartNameArtifact: クラス名
-	    if (partId.equals("ClassPartNameArtifact")) {
-	        if (artifact instanceof UMLClass) {
-	            return ((UMLClass) artifact).getName();
-	        }
-	    }
-	    // ClassPartAttributesArtifact-{index}: 属性
-	    else if (partId.startsWith("ClassPartAttributesArtifact-")) {
-	        if (artifact instanceof UMLClass) {
-	            int index = extractIndex(partId);
-	            if (index >= 0) {
-	                List<UMLClassAttribute> attrs = ((UMLClass) artifact).getAttributes();
-	                if (index < attrs.size()) {
-	                    return attrs.get(index).toString();
-	                }
-	            }
-	        }
-	    }
-	    // ClassPartMethodsArtifact-{index}: 操作
-	    else if (partId.startsWith("ClassPartMethodsArtifact-")) {
-	        if (artifact instanceof UMLClass) {
-	            int index = extractIndex(partId);
-	            if (index >= 0) {
-	                List<UMLClassMethod> methods = ((UMLClass) artifact).getMethods();
-	                if (index < methods.size()) {
-	                    return methods.get(index).toString();
-	                }
-	            }
-	        }
-	    }
-	    
-	    return null;
 	}
 	// --- 改造箇所ここまで ---
 
@@ -590,6 +498,15 @@ public class DrawerPanel extends AbsolutePanel {
 	}
 	
 	/**
+	 * 絶対座標方式で移動操作を送信
+	 */
+	public void sendMoveWithAbsolutePosition(String elementId, int oldX, int oldY, int newX, int newY) {
+	    if (otHelper != null) {
+	        otHelper.sendMoveOperationAbsolute(elementId, oldX, oldY, newX, newY);
+	    }
+	}
+	
+	/**
 	 * サーバーからのOT操作を適用
 	 * WebSocketClientから呼び出される
 	 */
@@ -600,22 +517,8 @@ public class DrawerPanel extends AbsolutePanel {
 	        otHelper.setLastServerSequence(serverSequence);
 	    }
 	    
-	    // 自分の操作の場合でも、サーバーの結果と一致するか確認
+	    // 自分の操作の場合は既に適用済みなので何もしない
 	    if (isOwnOperation) {
-	        // 現在のローカル状態を取得
-	        String currentContent = getCurrentPartContent(elementId, partId);
-	        
-	        // サーバーの結果と比較
-	        if (currentContent != null && !currentContent.equals(afterText)) {
-	            // 不一致の場合はサーバーの結果で同期
-	            // これは他のクライアントの同時操作がサーバーで変換され、
-	            // 自分の操作の結果も影響を受けた場合に発生
-	            System.out.println("OT: isOwnOperationでも状態不一致を検出。サーバー結果で同期します。");
-	            System.out.println("  elementId=" + elementId + ", partId=" + partId);
-	            System.out.println("  local=" + currentContent);
-	            System.out.println("  server=" + afterText);
-	            updateArtifactText(elementId, partId, afterText);
-	        }
 	        return;
 	    }
 	    
@@ -645,26 +548,46 @@ public class DrawerPanel extends AbsolutePanel {
 	        UMLArtifact artifact = UMLArtifact.getArtifactById(id);
 	        
 	        if (artifact != null && artifact.isDraggable()) {
+	            // 現在位置を取得
 	            Point currentLocation = artifact.getLocation();
 	            
-	            // OTアルゴリズム：サーバーから受信したoldX/oldYとdeltaから最終座標を計算
-	            // oldX/oldYはサーバー側でOT変換済みの基準座標
-	            // delta適用により最終的な座標を得る
-	            int newX = oldX + deltaX;
-	            int newY = oldY + deltaY;
+	            // 現在位置にdeltaを加算（OTアルゴリズムの正しい適用方法）
+	            // これにより、複数の同時移動操作が順次適用される
+	            int newX = currentLocation.getX() + deltaX;
+	            int newY = currentLocation.getY() + deltaY;
 	            Point newLocation = new Point(newX, newY);
 	            
 	            // アーティファクトを新しい位置に移動
 	            artifact.moveTo(newLocation);
 	            artifact.rebuildGfxObject();
 	            
-	            System.out.println("OT移動適用: " + elementId + " old(" + oldX + "," + oldY + ") " +
-	                             "delta(" + deltaX + "," + deltaY + ") " +
+	            System.out.println("OT移動適用: " + elementId + " delta(" + deltaX + "," + deltaY + ") " +
 	                             currentLocation + " → " + newLocation);
 	        }
 	    } catch (Exception e) {
 	        // element IDのパースに失敗した場合は何もしない
 	        System.err.println("OT移動適用エラー: " + e.getMessage());
+	    }
+	}
+	
+	/**
+	 * 絶対座標方式で移動操作を適用（タイムスタンプベースのLWW）
+	 */
+	public void applyMoveOperationAbsolute(String elementId, int newX, int newY, long timestamp, String clientId) {
+	    try {
+	        int id = Integer.parseInt(elementId.substring("element-".length()));
+	        UMLArtifact artifact = UMLArtifact.getArtifactById(id);
+	        
+	        if (artifact != null && artifact.isDraggable()) {
+	            // 絶対座標で位置を設定
+	            Point newLocation = new Point(newX, newY);
+	            artifact.moveTo(newLocation);
+	            artifact.rebuildGfxObject();
+	            
+	            System.out.println("絶対座標移動適用: " + elementId + " → (" + newX + "," + newY + ") timestamp=" + timestamp);
+	        }
+	    } catch (Exception e) {
+	        System.err.println("絶対座標移動適用エラー: " + e.getMessage());
 	    }
 	}
 	
@@ -694,60 +617,26 @@ public class DrawerPanel extends AbsolutePanel {
 	        int id = Integer.parseInt(elementId.substring("element-".length()));
 	        UMLArtifact artifact = UMLArtifact.getArtifactById(id);
 
-	        if (artifact != null && artifact instanceof ClassArtifact) {
-	            ClassArtifact classArtifact = (ClassArtifact) artifact;
+	        if (artifact != null) {
 	            String currentText = "";
-	            
 	            // クラス名の場合
-	            if (partId.contains("ClassPartNameArtifact")) {
-	                currentText = classArtifact.getUMLClass().getName();
+	            if (artifact instanceof ClassArtifact && partId.contains("ClassPartNameArtifact")) {
+	                currentText = ((ClassArtifact) artifact).getUMLClass().getName();
 	            }
-	            // 属性の場合
-	            else if (partId.contains("ClassPartAttributesArtifact")) {
-	                int attrIndex = extractIndex(partId);
-	                if (attrIndex >= 0 && attrIndex < classArtifact.getAttributes().size()) {
-	                    UMLClassAttribute attr = classArtifact.getAttributes().get(attrIndex);
-	                    currentText = attr.toString();
-	                }
-	            }
-	            // 操作の場合
-	            else if (partId.contains("ClassPartMethodsArtifact")) {
-	                int methodIndex = extractIndex(partId);
-	                if (methodIndex >= 0 && methodIndex < classArtifact.getMethods().size()) {
-	                    UMLClassMethod method = classArtifact.getMethods().get(methodIndex);
-	                    currentText = method.toString();
-	                }
-	            }
+	            // ※他のアーティファクトタイプ（属性、操作など）への対応も必要ならここに追加
 
 	            // パッチ適用 (DiffMatchPatchGwtを使用)
 	            DiffMatchPatchGwt dmp = new DiffMatchPatchGwt();
 	            JavaScriptObject patches = dmp.patchFromText(patchText);
+	            
+	            // パッチ適用結果を取得（配列の0番目がテキスト）
+	            // 注意: 以下の行は dmp.patchApply の戻り値の型によって調整が必要な場合がありますが
+	            // まずは標準的な実装として配置します
 	            String newText = dmp.patchApply(patches, currentText);
 
 	            // 反映
-	            if (partId.contains("ClassPartNameArtifact")) {
-	                classArtifact.getUMLClass().setName(newText);
-	            }
-	            else if (partId.contains("ClassPartAttributesArtifact")) {
-	                int attrIndex = extractIndex(partId);
-	                if (attrIndex >= 0 && attrIndex < classArtifact.getAttributes().size()) {
-	                    UMLClassAttribute attr = classArtifact.getAttributes().get(attrIndex);
-	                    UMLClassAttribute newAttr = UMLClassAttribute.parseAttribute(newText);
-	                    attr.setVisibility(newAttr.getVisibility());
-	                    attr.setName(newAttr.getName());
-	                    attr.setType(newAttr.getType());
-	                }
-	            }
-	            else if (partId.contains("ClassPartMethodsArtifact")) {
-	                int methodIndex = extractIndex(partId);
-	                if (methodIndex >= 0 && methodIndex < classArtifact.getMethods().size()) {
-	                    UMLClassMethod method = classArtifact.getMethods().get(methodIndex);
-	                    UMLClassMethod newMethod = UMLClassMethod.parseMethod(newText);
-	                    method.setVisibility(newMethod.getVisibility());
-	                    method.setName(newMethod.getName());
-	                    method.setReturnType(newMethod.getReturnType());
-	                    method.setParameters(newMethod.getParameters());
-	                }
+	            if (artifact instanceof ClassArtifact && partId.contains("ClassPartNameArtifact")) {
+	                ((ClassArtifact) artifact).getUMLClass().setName(newText);
 	            }
 	            
 	            artifact.rebuildGfxObject();

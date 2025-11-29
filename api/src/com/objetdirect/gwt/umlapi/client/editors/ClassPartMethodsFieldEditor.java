@@ -68,7 +68,6 @@ public class ClassPartMethodsFieldEditor extends FieldEditor {
 		String oldContent = this.methodToChange.toString();
 		ClassPartMethodsArtifact cpm = (ClassPartMethodsArtifact) this.artifact;
 		ClassArtifact classArtifact = (ClassArtifact)cpm.getNodeArtifact();
-		int classId = classArtifact.getId();
 		UMLClassMethod  ucm = new UMLClassMethod(null, "", "", null);
 
 		if (newContent.trim().equals("")) {
@@ -90,19 +89,6 @@ public class ClassPartMethodsFieldEditor extends FieldEditor {
 		this.methodToChange.setParameters(newMethod.getParameters());
 
 		((ClassPartMethodsArtifact) this.artifact).getNodeArtifact().rebuildGfxObject();
-
-		// OT方式でテキスト変更を送信
-		if (UMLCanvas.webSocketSender != null && !oldContent.equals(newContent)) {
-		    // 操作のインデックスを取得
-		    int methodIndex = classArtifact.getMethods().indexOf(this.methodToChange);
-		    if (methodIndex >= 0) {
-		        String elementId = "element-" + classId;
-		        String partId = "ClassPartMethodsArtifact-" + methodIndex;
-		        UMLCanvas.webSocketSender.sendTextChangeWithOT(elementId, partId, oldContent, newContent);
-		        // OT送信した場合はedit_eventへの記録をスキップして終了
-		        return true;
-		    }
-		}
 
 		if(oldContent.toString().equals(newContent.toString())){
 			//Nothing to do

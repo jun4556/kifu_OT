@@ -106,7 +106,7 @@ Since no automated tests are configured:
 - [ ] WAR file created successfully
 - [ ] Database migrations prepared (if needed)
 - [ ] Configuration files updated
-- [ ] `appengine-web.xml` configured correctly
+- [ ] Tomcat webapps deployment verified
 
 ## Environment Verification
 - [ ] GWT SDK at `C:\gwt-2.8.2-custom`

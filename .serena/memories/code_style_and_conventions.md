@@ -8,7 +8,7 @@
 
 ### Java Code
 - **Classes**: PascalCase (e.g., `UMLArtifact`, `GWTUMLDrawer`, `DrawerPanel`)
-- **Methods**: camelCase (e.g., `getSymbolsOverview`, `createDiagram`)
+- **Methods**: camelCase (e.g., `getCurrentPartContent`, `applyOTOperation`)
 - **Variables**: camelCase
 - **Constants**: UPPER_SNAKE_CASE (expected)
 - **Packages**: lowercase with dots (e.g., `com.objetdirect.gwt.umlapi.client`)
@@ -44,6 +44,8 @@ com.objetdirect.gwt.[module].client/
   ├── artifacts/      # UI artifacts/elements
   ├── beans/         # Data beans
   ├── helpers/       # Helper utilities
+  ├── editors/       # Field editors
+  ├── collaboration/ # OT/WebSocket components
   ├── [feature]/     # Feature packages
   │   ├── Service.java
   │   └── ServiceAsync.java
@@ -80,3 +82,4 @@ com.objetdirect.gwt.[module].client/
 4. Include source files in JAR for GWT compilation
 5. Test in hosted mode before GWT compile
 6. Document in Japanese for this project
+7. When editing FieldEditor classes, maintain backward compatibility with logging system

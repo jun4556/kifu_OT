@@ -89,6 +89,14 @@ public class ClassPartMethodsFieldEditor extends FieldEditor {
 		this.methodToChange.setParameters(newMethod.getParameters());
 
 		((ClassPartMethodsArtifact) this.artifact).getNodeArtifact().rebuildGfxObject();
+		
+		// OT方式でテキスト変更を送信
+		if (UMLCanvas.webSocketSender != null && !oldContent.toString().equals(newContent.toString())) {
+		    int classId = classArtifact.getId();
+		    String elementId = "element-" + classId;
+		    String partId = "ClassPartMethodsArtifact-" + classId;
+		    UMLCanvas.webSocketSender.sendTextChangeWithOT(elementId, partId, oldContent.toString(), newContent.toString());
+		}
 
 		if(oldContent.toString().equals(newContent.toString())){
 			//Nothing to do

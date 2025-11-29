@@ -23,7 +23,7 @@
 ## Development Environment
 - **GWT SDK Path**: `C:\gwt-2.8.2-custom`
 - **Encoding**: UTF-8
-- **IDE**: Eclipse (`.settings/` directories present)
+- **IDE**: Eclipse (.settings/ directories present)
 - **OS**: Windows
 - **Application Server**: Tomcat 8+ (required for WebSocket support)
 
@@ -53,3 +53,4 @@ Apache Ant with the following targets:
 ## Deployment
 - Google App Engine compatible (appengine-web.xml present)
 - WAR file deployment format
+- Typical deployment: Tomcat webapps directory

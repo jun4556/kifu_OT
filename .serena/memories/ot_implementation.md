@@ -4,7 +4,7 @@
 リアルタイム共同編集時の競合問題を解決。複数ユーザーが同時にUML図を編集しても、すべての変更を保持し矛盾なく統合する。
 
 ## Problem Solved
-**Before**: 2人が同時編集すると、最初の変更のみがDB保存され、2番目の変更は破棄される（last-write-wins）
+**Before**: 2人が同時編集すると、最初の変更のみがDB保存され、2番目の変更は破棄される(last-write-wins)
 **After**: 各操作にシーケンス番号を付与し、サーバー側でトランスフォームして全変更を保持
 
 ## Architecture
@@ -37,7 +37,8 @@ Client → sendTextChangeWithOT()
    - Methods:
      - `processOperation()` - Main processing logic
      - `transformOperation()` - OT algorithm
-     - `recomputePatch()` - Patch transformation (needs diff-match-patch)
+     - `recomputePatch()` - Patch transformation
+     - `getConcurrentOperations()` - Filters operations by elementId/partId
 
 #### Client-Side
 1. **EditOperation.java** (`drawer/src/.../client/beans/`)
@@ -84,6 +85,9 @@ CREATE TABLE operation_log (
 1. **WebSocketClient.java** - Added `editOperationResponse` handler in `onMessage()`
 2. **DrawerPanel.java** - Added `otHelper` field and OT methods
 3. **build.xml** - Added OT library classpaths
+4. **ClassPartAttributesFieldEditor.java** - OT sending code (currently commented out)
+5. **ClassPartMethodsFieldEditor.java** - OT sending code (currently commented out)
+6. **ClassPartNameFieldEditor.java** - OT sending code (currently commented out)
 
 ### Required Libraries
 - `diff-match-patch-1.2.jar` - Text diff/patch operations
@@ -95,33 +99,27 @@ Download via: `download_libraries.bat`
 ## Setup Steps
 1. Download libraries: `download_libraries.bat`
 2. Create database table: `setup_database.bat` or `mysql -u root -p < api\operation_log.sql`
-3. Integrate code snippets (see `OT_Integration_Checklist.md`)
-4. Build: `cd drawer && ant clean && ant build`
-5. Deploy to Tomcat 8+
+3. Build: `cd drawer && ant clean && ant build`
+4. Deploy to Tomcat 8+
 
-## Testing
-1. Open 2 browsers with same exercise
-2. Edit same class name simultaneously
-3. Verify both changes are saved in operation_log
-4. Check browser console for `editOperationResponse` messages
-5. Check Tomcat logs for operation processing
+## Current Status (2025-11)
+**OT功能を一時的に無効化**:
+- `ClassPartAttributesFieldEditor.java`
+- `ClassPartMethodsFieldEditor.java`
+- `ClassPartNameFieldEditor.java`
+
+理由: ブラウザ側で`diff_match_patch.js`が読み込まれず、`diff_match_patch is not defined`エラーが発生するため。
+基本的な個人編集機能を復旧するため、OT送信コードをコメントアウトして従来のロギング方式に戻した。
 
 ## Known Limitations
-- `recomputePatch()` in OperationManager.java is simplified (needs full diff-match-patch integration)
-- Requires manual code integration (see `DrawerPanel_OT_methods_v2.txt`, `WebSocketClient_OT_addition.txt`)
+- JavaScript library loading issue: `diff_match_patch.js` not accessible from browser
+- OT currently disabled for basic functionality
 - Requires Tomcat 8+ for WebSocket support
+- Requires proper deployment path configuration
 
 ## Documentation Files
 - `OT_Implementation_Summary.md` - Complete implementation report
 - `OT_Integration_Checklist.md` - Step-by-step integration guide
-- `OT_Implementation_Guide.md` - Comprehensive setup and usage guide
-- `DiffMatchPatch_Installation.md` - Library installation details
-- `WebSocket_Deployment.md` - WebSocket deployment guide
-- `OperationManager_patch_implementation.txt` - Patch transform examples
-
-## Future Enhancements
-- Full diff-match-patch integration in `OperationManager.recomputePatch()`
-- Conflict visualization in UI
-- Offline support with local storage
-- Undo/Redo based on operation history
-- Performance optimization (operation queue cleanup, DB indexing)
+- `docs/OT_Implementation_Guide.md` - Comprehensive setup guide
+- `docs/DiffMatchPatch_Installation.md` - Library installation details
+- `docs/WebSocket_Deployment.md` - WebSocket deployment guide

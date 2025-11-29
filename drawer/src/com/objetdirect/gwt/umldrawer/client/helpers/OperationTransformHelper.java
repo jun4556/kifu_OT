@@ -158,7 +158,7 @@ public class OperationTransformHelper {
     }
     
     /**
-     * サーバーシーケンス番号を設定（同期時に使用）
+     * 最新のサーバーシーケンス番号を設定
      */
     public void setLastServerSequence(int serverSequence) {
         this.lastServerSequence = serverSequence;

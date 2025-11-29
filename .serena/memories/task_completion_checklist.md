@@ -1,126 +1,209 @@
-# Task Completion Checklist
+# タスク完了時のチェックリスト
 
-## After Code Changes
+タスク完了時には、以下の手順を実行してコードの品質を保証します。
 
-### 1. Compile Java Code
+## 1. コンパイル確認
+
+### Javaコンパイル
 ```cmd
-# If api module was changed
-cd api
-ant javac
-
-# If drawer module was changed
 cd drawer
 ant javac
 ```
-✓ Check for compilation errors
-✓ Fix any errors before proceeding
+または
+```cmd
+cd api
+ant javac
+```
 
-### 2. GWT Compile (drawer only)
+**確認項目:**
+- [ ] コンパイルエラーがない
+- [ ] 警告を確認（必要に応じて修正）
+
+### GWTコンパイル（Drawer側のみ）
 ```cmd
 cd drawer
 ant gwtc
 ```
-⚠️ Note: GWT compilation takes time (Java to JavaScript translation)
-- JVM args used: `-Xss16M -Xmx1024M`
-- May take several minutes
-✓ Verify successful compilation
 
-### 3. Full Build Verification
+**確認項目:**
+- [ ] GWT→JavaScriptトランスパイル成功
+- [ ] war/gwtumlapi/ または war/umldrawer/ に出力ファイル生成
+
+## 2. ビルド
+
+### フルビルド
 ```cmd
-# API module
-cd api
-ant dist
-
-# Drawer module  
 cd drawer
+ant clean
 ant build
 ```
 
-### 4. Test in Development Mode (Optional)
-```cmd
-cd drawer
-ant hosted
-```
-Or:
-```cmd
-cd drawer
-ant oophm
-```
-✓ Verify UI works correctly
-✓ Test new functionality
-✓ Check browser console for errors
+**確認項目:**
+- [ ] クリーンビルド成功
+- [ ] war/WEB-INF/classes/ にクラスファイル生成
 
-### 5. Create Deployment Package (Before Deploy)
+## 3. WARファイル生成
+
 ```cmd
 cd drawer
 ant war
 ```
-Output: `KIfU4.war`
 
-## Clean Build (If Issues Occur)
-```cmd
-# Clean all
-cd api
-ant clean
+**確認項目:**
+- [ ] KIfU4.war が生成される
+- [ ] ファイルサイズが適切（破損していない）
 
-cd ..\drawer
-ant clean
+## 4. データベース整合性確認
 
-# Rebuild
-cd ..\api
-ant dist
-
-cd ..\drawer
-ant build
+### テーブル存在確認
+```sql
+USE kifu;
+SHOW TABLES;
 ```
 
-## Pre-Commit Checklist
-- [ ] No compilation errors
-- [ ] GWT compilation successful
-- [ ] Code follows project conventions
-- [ ] If OT-related changes: libraries downloaded to drawer/war/WEB-INF/lib/
-- [ ] If database changes: SQL migration tested
-- [ ] Integration tests passed (if applicable)
-- [ ] UTF-8 encoding maintained
-- [ ] Comments/documentation updated (Japanese if applicable)
-- [ ] Tested in browser (if UI changes)
-- [ ] Database schema changes documented (if any)
+**確認項目:**
+- [ ] operation_log テーブルが存在
+- [ ] その他必要なテーブルが存在
 
-## Code Review Points
-- [ ] Existing functionality still works
-- [ ] New features work as expected
-- [ ] UI displays correctly
-- [ ] No console errors
-- [ ] Database operations successful (if applicable)
-- [ ] Proper error handling
+### スキーマ確認
+```sql
+DESCRIBE operation_log;
+```
 
-## Testing (Manual)
-Since no automated tests are configured:
-- [ ] Test in hosted mode
-- [ ] Verify browser compatibility
-- [ ] Check operation logs (if applicable)
-- [ ] Test with sample exercises/tasks
-- [ ] Verify data persistence
+**確認項目:**
+- [ ] 必要なカラムがすべて存在
+- [ ] データ型が正しい
 
-## Deployment Preparation
-- [ ] WAR file created successfully
-- [ ] Database migrations prepared (if needed)
-- [ ] Configuration files updated
-- [ ] `appengine-web.xml` configured correctly
+## 5. デプロイ
 
-## Environment Verification
-- [ ] GWT SDK at `C:\gwt-2.8.2-custom`
-- [ ] Java 8 or compatible installed
-- [ ] MySQL running (if testing locally)
-- [ ] All dependencies in `war/WEB-INF/lib/`
+### Tomcatデプロイ
+```cmd
+copy drawer\KIfU4.war %CATALINA_HOME%\webapps\
+%CATALINA_HOME%\bin\startup.bat
+```
 
-## Logging and Debugging
-- Client-side logs: Browser console
-- Server-side logs: Application server logs
-- Operation logs: Database `operation_log` table
-- Canvas logs: `drawer\war\canvasLog.txt` (if used)
+**確認項目:**
+- [ ] WARファイルがwebappsにコピーされた
+- [ ] Tomcatが正常起動
+- [ ] 自動デプロイ完了（KIfU4/ディレクトリ作成）
 
-## Documentation Updates
-- [ ] Javadoc generated (if public API changed)
-- [ ] NextAction.txt updated (if needed)
-- [ ] README files updated (if applicable)
+### ログ確認
+```cmd
+type %CATALINA_HOME%\logs\catalina.out
+```
+
+**確認項目:**
+- [ ] 起動エラーがない
+- [ ] WebSocket初期化成功
+- [ ] データベース接続成功
+
+## 6. 機能テスト
+
+### 基本動作確認
+1. [ ] ブラウザで http://localhost:8080/KIfU4/ にアクセス
+2. [ ] ログイン可能
+3. [ ] クラス図が表示される
+4. [ ] 基本的な編集操作が動作
+
+### OT機能確認（該当する場合）
+1. [ ] 2つのブラウザで同じ演習を開く
+2. [ ] 同時編集実行
+3. [ ] 両方のブラウザで変更が反映される
+4. [ ] データベースに操作が記録される
+
+```sql
+SELECT * FROM operation_log 
+WHERE exercise_id = <演習ID> 
+ORDER BY server_sequence DESC 
+LIMIT 10;
+```
+
+5. [ ] 操作ログが正しく記録されている
+
+### WebSocket接続確認
+- [ ] ブラウザDevToolsコンソールで "WebSocket connection opened." を確認
+- [ ] 切断時のエラーハンドリング確認
+
+## 7. コード品質チェック
+
+### コードレビュー
+- [ ] 適切なエラーハンドリング
+- [ ] リソースクローズ（DB接続、ファイル等）
+- [ ] null チェック
+- [ ] スレッドセーフティ（必要な箇所で synchronized）
+
+### ドキュメント
+- [ ] 新規クラス/メソッドにJavadocコメント追加
+- [ ] 複雑なロジックにコメント追加
+- [ ] 必要に応じて README やドキュメント更新
+
+### import文整理
+- [ ] 未使用のimport削除
+- [ ] 適切なimport順序
+
+## 8. バージョン管理
+
+### Git操作
+```cmd
+git status
+git add .
+git commit -m "適切なコミットメッセージ"
+```
+
+**確認項目:**
+- [ ] 意図したファイルのみコミット
+- [ ] 生成ファイル（.class, war等）は除外
+- [ ] コミットメッセージが明確
+
+### .gitignore確認
+以下が除外されていることを確認:
+- [ ] war/WEB-INF/classes/
+- [ ] war/gwtumlapi/
+- [ ] war/umldrawer/
+- [ ] build/
+- [ ] *.class
+- [ ] KIfU4.war
+
+## 9. 実行時テスト（該当する場合）
+
+### 単体テスト
+```cmd
+:: JUnitテストがある場合
+cd api
+ant test
+```
+
+### 統合テスト
+- [ ] エンドツーエンドシナリオ実行
+- [ ] エラーケース確認
+- [ ] パフォーマンス確認（必要に応じて）
+
+## 10. クリーンアップ
+
+### 不要ファイル削除
+```cmd
+cd drawer
+ant clean
+```
+
+### 一時ファイル確認
+- [ ] *.swp, *.tmp ファイルが残っていない
+- [ ] ログファイルが肥大化していない
+
+## チェックリスト完了確認
+
+すべての項目をチェックしたら、タスク完了とします。
+
+**最終確認:**
+- [ ] ビルド成功
+- [ ] デプロイ成功
+- [ ] 主要機能動作確認
+- [ ] ログにエラーなし
+- [ ] コードコミット完了
+
+## トラブルシューティング参照
+
+問題が発生した場合は以下のドキュメントを参照:
+- OT_Integration_Checklist.md - 統合時のトラブルシューティング
+- OT_Implementation_Guide.md - 実装ガイド
+- Tomcatログ: %CATALINA_HOME%\logs\catalina.out

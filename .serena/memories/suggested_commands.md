@@ -1,148 +1,219 @@
-# Suggested Commands (Windows)
+# 推奨コマンド一覧
 
-## Build Commands
+## プロジェクトセットアップ
 
-### API Module
+### 1. ライブラリダウンロード
 ```cmd
-cd api
-ant dist
+download_libraries.bat
 ```
-Individual targets:
-- `ant javac` - Compile Java sources
-- `ant jar` - Create JAR file
-- `ant javadoc` - Generate documentation
-- `ant clean` - Clean build artifacts
+必要なJARファイル（diff-match-patch, javax.websocket-api, gson）をダウンロード
 
-### Drawer Module
-```cmd
-cd drawer
-ant build
-```
-Individual targets:
-- `ant javac` - Compile Java sources
-- `ant gwtc` - GWT compile to JavaScript
-- `ant war` - Create WAR file (KIfU4.war)
-- `ant clean` - Clean build artifacts
-
-## Development Mode
-```cmd
-cd drawer
-ant hosted
-```
-Alternative:
-```cmd
-cd drawer
-ant oophm
-```
-
-## Database Commands
-Import SQL files using MySQL:
-```cmd
-mysql -u root -p gwtumldrawer < drawer\kifu6.sql
-```
-
-SQL files available:
-- `api\20150903kifu3.sql`
-- `api\20161019kifu5.sql`
-- `api\operation_log.sql` (OT implementation)
-- `drawer\kifu6.sql`
-- `drawer\kifu6_akagidp.sql`
-
-Create operation_log table (OT implementation):
+### 2. データベースセットアップ
 ```cmd
 setup_database.bat
 ```
-or manually:
+operation_logテーブルを作成
+
+または手動で:
 ```cmd
 mysql -u root -p < api\operation_log.sql
 ```
 
-## OT Implementation Commands
+## ビルドコマンド
 
-### Download Required Libraries
-```cmd
-download_libraries.bat
-```
-This downloads:
-- diff-match-patch-1.2.jar
-- javax.websocket-api-1.1.jar
-- gson-2.8.9.jar
-
-### Build with OT Support
+### クリーンビルド（drawer）
 ```cmd
 cd drawer
 ant clean
 ant build
-ant war
 ```
 
-### Deploy to Tomcat
+### WARファイル生成
+```cmd
+cd drawer
+ant war
+```
+出力: KIfU4.war
+
+### APIライブラリビルド
+```cmd
+cd api
+ant clean
+ant javac
+ant jar
+```
+出力: build/dist/gwt-umlapi.jar
+
+## デプロイ
+
+### Tomcatへのデプロイ
 ```cmd
 copy drawer\KIfU4.war %CATALINA_HOME%\webapps\
 ```
 
-Note: Requires Tomcat 8 or later for WebSocket support.
+### Tomcat起動
+```cmd
+%CATALINA_HOME%\bin\startup.bat
+```
 
-## Windows Shell Commands
+### Tomcat停止
+```cmd
+%CATALINA_HOME%\bin\shutdown.bat
+```
 
-### Navigation
-- `cd api` - Change to api directory
-- `cd drawer` - Change to drawer directory
-- `cd ..` - Go up one directory
-- `dir` - List directory contents
-- `dir /s /b *.java` - Find all Java files recursively
+## データベース操作
 
-### File Operations
-- `type filename` - Display file contents
-- `more filename` - Display file with pagination
-- `copy source dest` - Copy file
-- `move source dest` - Move/rename file
-- `del filename` - Delete file
-- `mkdir dirname` - Create directory
-- `rmdir /s dirname` - Delete directory tree
+### MySQLログイン
+```cmd
+mysql -u root -p
+```
 
-### Search
-- `find "text" filename` - Search in file
-- `findstr /s /i "pattern" *.java` - Recursive search in Java files
+### データベース確認
+```sql
+USE kifu;
+SHOW TABLES;
+DESCRIBE operation_log;
+```
 
-## Git Commands
+### operation_logの内容確認
+```sql
+SELECT * FROM operation_log ORDER BY server_sequence DESC LIMIT 10;
+```
+
+## Windowsシステムコマンド
+
+### ディレクトリ一覧
+```cmd
+dir
+dir /s  :: サブディレクトリも含む
+```
+
+### ディレクトリ移動
+```cmd
+cd <directory>
+cd ..  :: 親ディレクトリ
+cd \   :: ルート
+```
+
+### ファイル検索
+```cmd
+dir /s /b *.java  :: すべてのJavaファイルを検索
+```
+
+### ファイル内容検索
+```cmd
+findstr /s /i "pattern" *.java  :: 大文字小文字区別なし
+```
+
+### ファイルコピー
+```cmd
+copy <source> <destination>
+xcopy /s /e <source_dir> <destination_dir>  :: ディレクトリごとコピー
+```
+
+### ファイル削除
+```cmd
+del <file>
+rmdir /s /q <directory>  :: ディレクトリごと削除
+```
+
+## Git操作
+
+### ステータス確認
 ```cmd
 git status
+```
+
+### 変更のコミット
+```cmd
 git add .
-git commit -m "message"
-git push
-git pull
-git log --oneline
+git commit -m "commit message"
+```
+
+### プッシュ
+```cmd
+git push origin main
+```
+
+### ブランチ確認
+```cmd
 git branch
 ```
 
-## Full Build Process
-```cmd
-rem Build API first
-cd api
-ant clean
-ant dist
+## ログ確認
 
-rem Then build drawer
-cd ..\drawer
-ant clean
-ant build
-ant war
+### Tomcatログ
+```cmd
+type %CATALINA_HOME%\logs\catalina.out
+:: またはテキストエディタで開く
 ```
 
-## Quick Compile (Java only, no GWT)
-```cmd
-cd drawer
-ant javac
+### 最新のログ表示（PowerShellの場合）
+```powershell
+Get-Content %CATALINA_HOME%\logs\catalina.out -Tail 50
 ```
 
-## Project Setup
-Ensure GWT SDK is installed at:
-- `C:\gwt-2.8.2-custom`
+## テスト・デバッグ
 
-Verify Java version:
+### ブラウザでアプリケーション起動
+```
+http://localhost:8080/KIfU4/
+```
+
+### WebSocket接続確認
+ブラウザDevToolsのConsoleで:
+```javascript
+// WebSocket connection opened. が表示されることを確認
+```
+
+### データベース接続テスト
+```sql
+-- hikari.propertiesの設定を確認
+-- 接続できるかテスト
+SELECT 1;
+```
+
+## 便利なユーティリティコマンド
+
+### JARファイルの内容確認
+```cmd
+jar tf <jarfile>
+```
+
+### クラスパス確認（Javaコンパイル時）
+```cmd
+echo %CLASSPATH%
+```
+
+### Javaバージョン確認
 ```cmd
 java -version
 javac -version
 ```
-Should be Java 8 or compatible.
+
+### 環境変数表示
+```cmd
+set  :: すべての環境変数
+set JAVA_HOME  :: 特定の環境変数
+```
+
+## トラブルシューティング
+
+### ポート使用状況確認
+```cmd
+netstat -ano | findstr :8080
+```
+
+### プロセス終了
+```cmd
+taskkill /F /PID <process_id>
+```
+
+### ビルドエラー時のクリーンアップ
+```cmd
+cd drawer
+ant clean
+del /s /q war\WEB-INF\classes\*
+del /s /q war\gwtumlapi\*
+del /s /q war\umldrawer\*
+```

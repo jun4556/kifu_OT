@@ -67,6 +67,7 @@ public class ClassPartAttributesFieldEditor extends FieldEditor {
 		String oldContent = this.attributeToChange.toString();
 		ClassPartAttributesArtifact cpm = (ClassPartAttributesArtifact) this.artifact;
 		ClassArtifact classArtifact = (ClassArtifact)cpm.getNodeArtifact();
+		int classId = classArtifact.getId();
 
 		if (newContent.trim().equals("")) {
 			((ClassPartAttributesArtifact) this.artifact).remove(this.attributeToChange);
@@ -85,6 +86,20 @@ public class ClassPartAttributesFieldEditor extends FieldEditor {
 		this.attributeToChange.setType(newAttribute.getType());
 
 		((ClassPartAttributesArtifact) this.artifact).getNodeArtifact().rebuildGfxObject();
+		
+		// OT方式でテキスト変更を送信
+		if (UMLCanvas.webSocketSender != null && !oldContent.equals(newContent)) {
+		    // 属性のインデックスを取得
+		    int attrIndex = classArtifact.getAttributes().indexOf(this.attributeToChange);
+		    if (attrIndex >= 0) {
+		        String elementId = "element-" + classId;
+		        String partId = "ClassPartAttributesArtifact-" + attrIndex;
+		        UMLCanvas.webSocketSender.sendTextChangeWithOT(elementId, partId, oldContent, newContent);
+		        // OT送信した場合はedit_eventへの記録をスキップして終了
+		        return true;
+		    }
+		}
+		
 		if(oldContent.equals(newAttribute.toString())){
 			//Nothing to do
 		}

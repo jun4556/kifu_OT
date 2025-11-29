@@ -114,6 +114,8 @@ public class UMLCanvas extends AbsolutePanel {
 	private static long										lifeLineCount					= 1;
 	private String											copyBuffer 						= "";
 	public static WebSocketSender webSocketSender;
+	/** OT操作中かどうかを示すフラグ（edit_event記録をスキップするために使用） */
+	private boolean isOTOperation = false;
 	private long											noteCount;
 	private LinkKind										activeLinking;
 	private Point											selectBoxStartPoint;
@@ -1999,6 +2001,7 @@ public class UMLCanvas extends AbsolutePanel {
 				selectedArtifact.rebuildGfxObject();
 				
 				// OT方式で移動を送信
+				boolean sentViaOT = false;
 				if (UMLCanvas.webSocketSender != null) {
 				    String elementId = "element-" + selectedArtifact.getId();
 				    Point newPoint = selectedArtifact.getLocation();
@@ -2006,6 +2009,7 @@ public class UMLCanvas extends AbsolutePanel {
 				    int deltaY = newPoint.getY() - oldPoint.getY();
 				    if (deltaX != 0 || deltaY != 0) {
 				        UMLCanvas.webSocketSender.sendMoveWithOT(elementId, oldPoint.getX(), oldPoint.getY(), deltaX, deltaY);
+				        sentViaOT = true;
 				    }
 				}
 
@@ -2014,9 +2018,12 @@ public class UMLCanvas extends AbsolutePanel {
 				//writeLog(selectedArtifact);
 				//MyLogger.operationLog("DropArtifact"+":"+selectedArtifact.toURL());
 				System.out.println("DropArtifact"+":"+selectedArtifact.toString());
-				MyLoggerExecute.registEditEvent(-1, selectedArtifact.toString(), "Place",
-						selectedArtifact.getClass().getName(), selectedArtifact.getId(), null, -1, -1,
-						null, oldPoint.getX()+","+oldPoint.getY(), selectedArtifact.getLocation().getX()+","+selectedArtifact.getLocation().getY(), null, UMLArtifact.getIdCount());
+				// OT経由で送信した場合はedit_eventに記録しない（operation_logに記録されるため）
+				if (!sentViaOT) {
+				    MyLoggerExecute.registEditEvent(-1, selectedArtifact.toString(), "Place",
+						    selectedArtifact.getClass().getName(), selectedArtifact.getId(), null, -1, -1,
+						    null, oldPoint.getX()+","+oldPoint.getY(), selectedArtifact.getLocation().getX()+","+selectedArtifact.getLocation().getY(), null, UMLArtifact.getIdCount());
+				}
 
 //				int preEventId, String editEvent, String eventType,
 //				String targetType, int targetId, String linkKind, int rightObjectId, int leftObjectId,
@@ -2028,7 +2035,8 @@ public class UMLCanvas extends AbsolutePanel {
 		GfxManager.getPlatform().clearVirtualGroup(this.outlines);
 		GfxManager.getPlatform().clearVirtualGroup(this.movingOutlineDependencies);
 
-		if(placeFlag){
+		// OT経由の場合はPlaceArtifactsイベントも記録しない
+		if(placeFlag && UMLCanvas.webSocketSender == null){
 			MyLoggerExecute.registEditEvent(-1, "PlaceArtifacts", "Place",
 					null, -1, null, -1, -1,
 					null, null, null, this.toUrl(), UMLArtifact.getIdCount());

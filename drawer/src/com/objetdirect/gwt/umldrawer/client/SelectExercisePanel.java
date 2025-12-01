@@ -2,7 +2,7 @@ package com.objetdirect.gwt.umldrawer.client;
 
 import java.util.List;
 
-import com.google.appengine.repackaged.com.google.common.base.Flag.Integer;
+// import com.google.appengine.repackaged.com.google.common.base.Flag.Integer;  // この行をコメントアウト
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
@@ -39,9 +39,9 @@ public class SelectExercisePanel extends VerticalPanel{
 				initButtons(mode);
 				// ▼ 修正: nullでない場合のみ cancel するように変更
 				// if (DrawerBase.countTimer != null) {
-				// DrawerBase.countTimer.cancel();
-				}
-}
+				// 	DrawerBase.countTimer.cancel();
+				// }
+			}
 			public void onFailure(Throwable caught){
 				Window.alert("Connection Error!");
 			}

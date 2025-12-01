@@ -849,6 +849,10 @@ public class DrawerBase extends DockPanel implements IDrawerBaseConectThread{
 		// 演習IDを使ってWebSocketに接続するメソッドを呼び出す！
 		connectToExerciseChannel(String.valueOf(Session.exerciseId));
 
+		// ★★★ OT方式を採用したため、全体同期タイマーを無効化 ★★★
+		// 理由: 0.5秒ごとの全体同期がOT操作を上書きし、共同編集が不安定になるため
+		// OT方式では操作単位で同期するため、全体同期は不要
+		/*
 		// 監視タイマーをセットアップするぞ！
 		this.syncTimer = new Timer() {
 		    @Override
@@ -871,6 +875,7 @@ public class DrawerBase extends DockPanel implements IDrawerBaseConectThread{
 		};
 		// 0.5秒ごとに"監視"を実行するんだ！
 		this.syncTimer.scheduleRepeating(500);
+		*/
 
 		// UMLCanvasが持つ"契約者"の宝箱に、我こそが契約者だと名乗り出る！
 		UMLCanvas.webSocketSender = new com.objetdirect.gwt.umlapi.client.helpers.WebSocketSender() {
@@ -949,12 +954,16 @@ mainPanel.showWidget(0);		this.add(mainPanel, DockPanel.CENTER);
 	    UMLCanvas.webSocketSender = this.webSocketClient;
 	    System.out.println("UMLCanvas.webSocketSender設定完了");
 
+	    // ★★★ 全体同期タイマーは無効化されているため、何もしない ★★★
+	    // OT方式では操作単位で同期するため、定期的な全体同期は不要
+	    /*
 	    // "監視塔"作戦をリセットして、新しい演習の監視を開始する
 	    this.lastCanvasUrl = ""; // 前回の状態をリセット
 	    if (this.syncTimer != null) {
 	    	this.syncTimer.cancel(); // 念のため一度止めてから
 	        this.syncTimer.scheduleRepeating(500); // タイマーを再開
 	    }
+	    */
 	}
 
 

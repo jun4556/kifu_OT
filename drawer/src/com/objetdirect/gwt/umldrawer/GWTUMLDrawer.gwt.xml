@@ -42,6 +42,9 @@
  	<!-- Turn off the `DivLogger` -->
     <set-property name="log_DivLogger" value="DISABLED" />
 
+	<!-- Add diff-match-patch JavaScript library -->
+	<script src="diff_match_patch.js" />
+
 	<!-- Specify the app entry point class.                         -->
 	<entry-point class='com.objetdirect.gwt.umldrawer.client.GWTUMLDrawer' />
 	<source path="client" />

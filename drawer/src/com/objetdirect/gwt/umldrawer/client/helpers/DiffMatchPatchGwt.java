@@ -17,7 +17,10 @@ public class DiffMatchPatchGwt {
      * JavaScriptの世界でdiff_match_patchのインスタンスを生成する。
      */
     private native JavaScriptObject createDmp() /*-{
-        return new diff_match_patch();
+        if (typeof $wnd.diff_match_patch === 'undefined') {
+            throw new Error('diff_match_patch is not loaded. Please ensure diff_match_patch.js is included in your HTML.');
+        }
+        return new $wnd.diff_match_patch();
     }-*/;
 
     /**

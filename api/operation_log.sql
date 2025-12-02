@@ -8,9 +8,16 @@ CREATE TABLE IF NOT EXISTS operation_log (
     element_id VARCHAR(255),
     part_id VARCHAR(255),
     operation_type VARCHAR(50) NOT NULL,
+    -- テキスト編集用カラム
     patch_text TEXT,
     before_text TEXT,
     after_text TEXT,
+    -- 移動操作用カラム
+    old_x INT,
+    old_y INT,
+    delta_x INT,
+    delta_y INT,
+    -- シーケンス管理
     client_sequence INT,
     server_sequence INT NOT NULL,
     based_on_sequence INT,

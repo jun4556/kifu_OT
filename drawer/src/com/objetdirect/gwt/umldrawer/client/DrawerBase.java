@@ -849,10 +849,10 @@ public class DrawerBase extends DockPanel implements IDrawerBaseConectThread{
 		// 演習IDを使ってWebSocketに接続するメソッドを呼び出す！
 		connectToExerciseChannel(String.valueOf(Session.exerciseId));
 
-		// ★★★ OT方式を採用したため、全体同期タイマーを無効化 ★★★
-		// 理由: 0.5秒ごとの全体同期がOT操作を上書きし、共同編集が不安定になるため
-		// OT方式では操作単位で同期するため、全体同期は不要
-		/*
+		// ★★★ 段階的アプローチ: 全体同期の頻度を下げる (500ms → 5000ms) ★★★
+		// 理由: OT機能のデバッグ中のため、まず既存の同期機能で動作確認
+		// 頻度を下げることでOT操作との競合を減らす
+		
 		// 監視タイマーをセットアップするぞ！
 		this.syncTimer = new Timer() {
 		    @Override
@@ -873,9 +873,8 @@ public class DrawerBase extends DockPanel implements IDrawerBaseConectThread{
 		        }
 		    }
 		};
-		// 0.5秒ごとに"監視"を実行するんだ！
-		this.syncTimer.scheduleRepeating(500);
-		*/
+		// 5秒ごとに"監視"を実行するんだ！(デバッグ用に頻度を下げた)
+		this.syncTimer.scheduleRepeating(5000);
 
 		// UMLCanvasが持つ"契約者"の宝箱に、我こそが契約者だと名乗り出る！
 		UMLCanvas.webSocketSender = new com.objetdirect.gwt.umlapi.client.helpers.WebSocketSender() {
@@ -893,20 +892,20 @@ public class DrawerBase extends DockPanel implements IDrawerBaseConectThread{
 		        }
 		    }
 		    
-    public void sendMoveWithOT(String elementId, int oldX, int oldY, int deltaX, int deltaY) {
-        // OT方式で移動を送信
-        if (drawerPanel != null) {
-            drawerPanel.sendMoveWithOT(elementId, oldX, oldY, deltaX, deltaY);
-        }
-    }
-    
-    public void sendMoveWithAbsolutePosition(String elementId, int oldX, int oldY, int newX, int newY) {
-        // 絶対座標方式で移動を送信
-        if (drawerPanel != null) {
-            drawerPanel.sendMoveWithAbsolutePosition(elementId, oldX, oldY, newX, newY);
-        }
-    }
-};
+		    public void sendMoveWithOT(String elementId, int oldX, int oldY, int deltaX, int deltaY) {
+		        // OT方式で移動を送信
+		        if (drawerPanel != null) {
+		            drawerPanel.sendMoveWithOT(elementId, oldX, oldY, deltaX, deltaY);
+		        }
+		    }
+		    
+		    public void sendMoveWithAbsolutePosition(String elementId, int oldX, int oldY, int newX, int newY) {
+		        // 絶対座標方式で移動を送信
+		        if (drawerPanel != null) {
+		            drawerPanel.sendMoveWithAbsolutePosition(elementId, oldX, oldY, newX, newY);
+		        }
+		    }
+		};
 
 mainPanel.showWidget(0);		this.add(mainPanel, DockPanel.CENTER);
 		this.add(leftSideBar, DockPanel.WEST);
